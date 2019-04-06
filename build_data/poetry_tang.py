@@ -22,6 +22,7 @@ if __name__ == '__main__':
             for item in data:
                 paragraphs = item['paragraphs']
                 title = item['title']
+                title = re.sub(r'\t', ' ', title)
                 author = item['author']
                 l = ''
 
