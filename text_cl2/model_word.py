@@ -43,8 +43,10 @@ class RNN(nn.Module):
         self.drop_en = nn.Dropout(self.dropout_p)
 
 
-        self.hi = nn.Linear(self.hidden_size, self.hidden_size, bias=True)
-        self.attn_weights = nn.Linear(self.hidden_size, 1, bias=True)
+        #  self.hi = nn.Linear(self.hidden_size, self.hidden_size, bias=True)
+        #  self.attn_weights = nn.Linear(self.hidden_size, 1, bias=True)
+        self.hi = nn.Linear(self.hidden_size*2, self.hidden_size*2, bias=True)
+        self.attn_weights = nn.Linear(self.hidden_size*2, 1, bias=True)
         self.energy = nn.Linear(1, 1, bias=True)
 
 
@@ -71,8 +73,8 @@ class RNN(nn.Module):
             raise LookupError(' only support LSTM and GRU')
 
 
-        #  out_hidden_size = hidden_size * 2
-        out_hidden_size = hidden_size
+        out_hidden_size = hidden_size * 2
+        #  out_hidden_size = hidden_size
         if self.encoder_model == "avg":
             out_hidden_size = embed_size
 
@@ -173,7 +175,6 @@ class RNN(nn.Module):
         x_embed = self.encoder(x)
         x_embed = self.drop_en(x_embed)
 
-
         packed_input = pack_padded_sequence(x_embed, seq_lengths.cpu().numpy(),batch_first=True)
 
         # out_rnn shape (batch, seq_len, hidden_size * num_directions)
@@ -238,8 +239,11 @@ class RNN(nn.Module):
         batch_size, title_seq_len, out_size = title_out.shape
 
         # forward + backward
-        title_bilstm_out = title_out.view(batch_size, title_seq_len, 2, self.hidden_size)
-        title_bilstm_out = title_bilstm_out[:, :, 0, :] + title_bilstm_out[:, :, 1, :]
+        #  title_bilstm_out = title_out.view(batch_size, title_seq_len, 2, self.hidden_size)
+        #  title_bilstm_out = title_bilstm_out[:, :, 0, :] + title_bilstm_out[:, :, 1, :]
+        title_bilstm_out = self.hi.cuda()
+        title_bilstm_out = title_bilstm_out(title_out)
+
         # batch_size, hidden_size
         title_bilstm_out = torch.sum(title_bilstm_out, dim=1)
         title_last = title_bilstm_out / sorted_title_len.type(title_bilstm_out.dtype).unsqueeze(1).expand(title_bilstm_out.shape)
@@ -251,7 +255,6 @@ class RNN(nn.Module):
 
         x_embed = self.encoder(x)
         x_embed = self.drop_en(x_embed)
-
 
         packed_input = pack_padded_sequence(x_embed, seq_lengths.cpu().numpy(),batch_first=True)
 
@@ -274,16 +277,15 @@ class RNN(nn.Module):
                 batch_size, seq_len, out_size = out_rnn.shape
 
                 # forward + backward
-                bilstm_out = out_rnn.view(batch_size, seq_len, 2, self.hidden_size)
-                bilstm_out = bilstm_out[:, :, 0, :] + bilstm_out[:, :, 1, :]
+                #  bilstm_out = out_rnn.view(batch_size, seq_len, 2, self.hidden_size)
+                #  bilstm_out = bilstm_out[:, :, 0, :] + bilstm_out[:, :, 1, :]
                 #  batch_size, hidden_size
                 #  bilstm_out = torch.sum(bilstm_out, dim=1)
                 #  last_tensor = bilstm_out / seq_lengths.type(bilstm_out.dtype).unsqueeze(1).expand(bilstm_out.shape)
-                import pdb
-                pdb.set_trace()
 
-                bilstm_out = self.hi.cuda()
-                bilstm_out = bilstm_out(out_rnn)
+                bilstm_hi= self.hi.cuda()
+                bilstm_out = bilstm_hi(out_rnn)
+                #  bilstm_out = bilstm_hi(bilstm_out)
                 bilstm_out = torch.tanh(bilstm_out)
 
                 #  word_bias
@@ -331,4 +333,4 @@ class RNN(nn.Module):
 
         # shape: (batch_size, label_num)
         out = self.fc(last_tensor + title_last)
-        return out, soft_attn
+        return out

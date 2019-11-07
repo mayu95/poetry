@@ -9,7 +9,8 @@ import torch.nn as nn
 import torchtext
 
 import dataset
-import model_origin as model
+#  import model_origin as model
+import model_word as model
 
 parser = argparse.ArgumentParser(description='text classification')
 parser.add_argument('--data', type=str, default='',
