@@ -41,11 +41,11 @@ class RNN(nn.Module):
         #  self.drop_en = nn.Dropout(p=0.6)
         self.dropout_p = dropout_p
         self.drop_en = nn.Dropout(self.dropout_p)
-        
 
 
-        self.attn_weights = nn.Linear(self.hidden_size, 1, bias=False)
-        self.energy = nn.Linear(1, 1, bias=False)
+        self.hi = nn.Linear(self.hidden_size, self.hidden_size, bias=True)
+        self.attn_weights = nn.Linear(self.hidden_size, 1, bias=True)
+        self.energy = nn.Linear(1, 1, bias=True)
 
 
         # rnn module
@@ -276,10 +276,22 @@ class RNN(nn.Module):
                 # forward + backward
                 bilstm_out = out_rnn.view(batch_size, seq_len, 2, self.hidden_size)
                 bilstm_out = bilstm_out[:, :, 0, :] + bilstm_out[:, :, 1, :]
-                # batch_size, hidden_size
+                #  batch_size, hidden_size
                 #  bilstm_out = torch.sum(bilstm_out, dim=1)
                 #  last_tensor = bilstm_out / seq_lengths.type(bilstm_out.dtype).unsqueeze(1).expand(bilstm_out.shape)
+                import pdb
+                pdb.set_trace()
 
+                bilstm_out = self.hi.cuda()
+                bilstm_out = bilstm_out(out_rnn)
+                bilstm_out = torch.tanh(bilstm_out)
+
+                #  word_bias
+                mask = torch.arange(seq_len)[None, :] < seq_lengths[:, None].cpu()
+                mask = mask.float()
+                mask[mask==0] = -10000000
+                mask = torch.unsqueeze(mask, 2)
+                bilstm_out = bilstm_out * mask.cuda()
 
                 # attention 1: sum
                 #  attn_weights = torch.sum(bilstm_out, dim=2)
@@ -287,12 +299,14 @@ class RNN(nn.Module):
 
                 #  attention 2: energy
                 attn_weights = self.attn_weights.cuda()
-                attn_weights = attn_weights(bilstm_out)
+                attn_weights = attn_weights(bilstm_out)      # BxSxN --> BxSx1
+                attn_weights = attn_weights * mask.cuda()
+
                 attn_weights = torch.tanh(attn_weights)
 
                 energy = self.energy.cuda()
-                energy = energy(attn_weights)
-                energy = energy.squeeze(2)
+                energy = energy(attn_weights)           # BxSx1
+                energy = energy.squeeze(2)              # BxS
                 
                 #  soft_attn = F.softmax(energy, 1)
 
@@ -308,13 +322,8 @@ class RNN(nn.Module):
                 soft_attn_sum = torch.sum(soft_attn, dim=1).reshape(-1,1)
                 soft_attn = torch.div(soft_attn, soft_attn_sum)
 
-
                 attn = torch.bmm(bilstm_out.transpose(1,2), soft_attn.unsqueeze(2)).squeeze(2) # BxN 
                 last_tensor = attn
-
-
-
-
 
         else:
             out_rnn = out_rnn.sum(dim=1)
@@ -322,4 +331,4 @@ class RNN(nn.Module):
 
         # shape: (batch_size, label_num)
         out = self.fc(last_tensor + title_last)
-        return out
+        return out, soft_attn

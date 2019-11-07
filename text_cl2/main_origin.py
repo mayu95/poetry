@@ -9,7 +9,7 @@ import torch.nn as nn
 import torchtext
 
 import dataset
-import model_word as model
+import model_origin as model
 
 parser = argparse.ArgumentParser(description='text classification')
 parser.add_argument('--data', type=str, default='',
@@ -116,20 +116,6 @@ criterion = nn.CrossEntropyLoss()
 # Training code
 ###############################################################################
 
-def word_ids_to_sentence(id_tensor, vocab):
-    """Converts a sequence of word ids to a sentence
-    id_tensor: torch-based tensor
-    vocab: torchtext vocab
-    """
-    orig_shape = id_tensor.shape
-    id_tensor = id_tensor.view(-1)
-    res = []
-    for i in id_tensor:
-        res.append(vocab.itos[i])
-    res = np.array(res).reshape(orig_shape)
-    #  return res.T
-    return res
-
 def evaluate(data_iter):
     model.eval()
     correct = 0.
@@ -140,40 +126,12 @@ def evaluate(data_iter):
             label = batch.label
             title, title_len = batch.title[0], batch.title[1]
 
-            output,_ = model(text, text_len, title, title_len)
+            output = model(text, text_len, title, title_len)
             _, predicted_label = output.view(-1, label_num).max(dim=1)
             correct += (predicted_label == label).sum().item()
             example_num += len(label)
 
     return correct / example_num
-
-def eva_vis(data_iter):
-    model.eval()
-    i = 0
-    with torch.no_grad():
-        for counter, batch in enumerate(data_iter, 1):
-            text, text_len = batch.text[0], batch.text[1]
-            label = batch.label
-            title, title_len = batch.title[0], batch.title[1]
-
-            _, attn = model(text, text_len, title, title_len)
-            #  print attention and text
-            if i == 2:
-                poem = word_ids_to_sentence(text, TEXT.vocab)
-                p_label = word_ids_to_sentence(label, LABEL.vocab)
-                attn = attn.cpu().numpy()
-                writer = pd.ExcelWriter('result1.xlsx')
-                l = len(poem[0])
-                data = np.zeros(shape=(args.batch_size*3, l), dtype=object)
-                for t in range(args.batch_size):
-                    data[3*t] = p_label[t]
-                    data[3*t+1] = poem[t]
-                    data[3*t+2] = attn[t]
-                data = pd.DataFrame(data)
-                data.to_excel(writer, 'page_1', float_format='%.5f')
-                writer.save()
-                writer.close()
-            i += 1
 
 
 def train():
@@ -189,7 +147,7 @@ def train():
 
         #  model.zero_grad()
         optimizer.zero_grad()
-        output,_ = model(text, text_len, title, title_len)
+        output = model(text, text_len, title, title_len)
         loss = criterion(output, label)
         loss.backward()
 

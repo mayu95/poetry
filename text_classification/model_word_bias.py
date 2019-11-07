@@ -258,7 +258,6 @@ class RNN(nn.Module):
             soft_attn_sum = torch.sum(soft_attn, dim=1).reshape(-1,1)
             soft_attn = torch.div(soft_attn, soft_attn_sum)
 
-
             attn = torch.bmm(bilstm_out.transpose(1,2), soft_attn.unsqueeze(2)).squeeze(2) # BxN
             last_tensor = attn
         else:
