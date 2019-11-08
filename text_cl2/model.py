@@ -225,14 +225,6 @@ class RNN(nn.Module):
         title_emb = self.encoder(sorted_title)
         title_emb = self.drop_en(title_emb)
         packed_title_in = pack_padded_sequence(title_emb, sorted_title_len.cpu().numpy(),batch_first=True)
-        #  try:
-            #  packed_title_in = pack_padded_sequence(title_emb, sorted_title_len.cpu().numpy(),batch_first=True)
-        #  except Exception as e:
-            #  print('str(e):\t\t', str(e))
-            #  print(e.args)
-            #  pass
-            #  exit(0)
-
         packed_title_out, _ = self.rnn(packed_title_in, None)
         title_out, _ = pad_packed_sequence(packed_title_out, batch_first=True)
 
@@ -333,4 +325,4 @@ class RNN(nn.Module):
 
         # shape: (batch_size, label_num)
         out = self.fc(last_tensor + title_last)
-        return out
+        return out, soft_attn

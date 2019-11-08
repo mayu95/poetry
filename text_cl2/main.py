@@ -7,9 +7,11 @@ import os
 import torch
 import torch.nn as nn
 import torchtext
+import numpy as np
+import pandas as pd
 
 import dataset
-import model_word as model
+import model
 
 parser = argparse.ArgumentParser(description='text classification')
 parser.add_argument('--data', type=str, default='',
@@ -160,15 +162,22 @@ def eva_vis(data_iter):
             #  print attention and text
             if i == 2:
                 poem = word_ids_to_sentence(text, TEXT.vocab)
+                title = word_ids_to_sentence(title, TEXT.vocab)
                 p_label = word_ids_to_sentence(label, LABEL.vocab)
                 attn = attn.cpu().numpy()
                 writer = pd.ExcelWriter('result1.xlsx')
                 l = len(poem[0])
                 data = np.zeros(shape=(args.batch_size*3, l), dtype=object)
                 for t in range(args.batch_size):
-                    data[3*t] = p_label[t]
-                    data[3*t+1] = poem[t]
-                    data[3*t+2] = attn[t]
+                    #  title and label
+                    for i in range(l):
+                        if i in range(len(title[t])):
+                            data[4*t][i] = title[t][i]
+                        else:
+                            data[4*t][i] = str(p_label[t])
+                    #  data[4*t+1] = title[t]
+                    data[4*t+1] = poem[t]
+                    data[4*t+2] = attn[t]
                 data = pd.DataFrame(data)
                 data.to_excel(writer, 'page_1', float_format='%.5f')
                 writer.save()
@@ -211,10 +220,17 @@ best_val_correct_rate = None
 # At any point you can hit Ctrl + C to break out of training early.
 all_train_start_time = datetime.datetime.now()
 try:
+    last_rate = 0
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_loss = train()
         correct_rate = evaluate(test_iter)
+        #  visualization
+        eva_vis(test_iter)
+        #  if correct_rate >= last_rate: 
+            #  last_rate = correct_rate
+            #  eva_vis(test_iter)
+    
 
         print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on test {correct_rate} | lr {lr}")
         if not best_val_correct_rate or correct_rate > best_val_correct_rate:
