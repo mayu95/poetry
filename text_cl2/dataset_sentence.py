@@ -32,10 +32,10 @@ def create_data_iter(batch_size, device, data_root):
     )
     LABEL = Field(sequential=False, use_vocab=True, unk_token=None)
     # Training and valid data fields 
-    tv_datafields = [("label", LABEL), ("title", TEXT), ("text", TEXT)] 
+    tv_datafields = [("label", LABEL), ("title", TEXT), ("text", TEXT), ("leng", TEXT)] 
     train, val, test = TabularDataset.splits(
         path=data_root,
-        train='train2', validation="dev1.title", test="test2",
+        train='train1', validation="test2", test="test1",
         format='tsv',
         skip_header=False,
         fields=tv_datafields,

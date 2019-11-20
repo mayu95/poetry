@@ -37,7 +37,10 @@ def create_data_iter(batch_size, device, data_root):
     train, val, test = TabularDataset.splits(
         path=data_root,
         #  train='train_#.tsv', validation="valid_#.tsv", test="test_#.tsv",
-        train='train_3.noTitle', validation="dev1.no_title", test="test_3.noTitle",
+        #  train='train_3.noTitle', validation="dev1.no_title", test="test_3.noTitle",
+        #  SemEval twitter 2013
+        #  train='train_pos', validation="dev_pos", test="test_pos",
+        train='train_neg', validation="dev_neg", test="test_neg",
         format='tsv',
         skip_header=False,
         fields=tv_datafields

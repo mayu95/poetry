@@ -1,0 +1,2 @@
+Namespace(batch_size=128, bidirectional=True, clip=0.25, data='data_title', device='cuda:0', dropout=0.2, emsize=200, encoder='rnn', epochs=30, log_interval=200, lr=0.005, nhid=200, nlayers=1, note='', save='model.pt', seed=1111, weight_decay=0.0001)
+vocab_size: 87544 label_num: 2

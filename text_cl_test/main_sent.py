@@ -8,11 +8,9 @@ import torch
 import torch.nn as nn
 import torchtext
 import numpy as np
-import pandas as pd
-
-import dataset
-#  import model_zeroshot as model
-import model_word_bias as model
+import pandas as pd 
+import dataset_sent as dataset
+import model_bias as model
 
 parser = argparse.ArgumentParser(description='text classification')
 parser.add_argument('--data', type=str, default='',
@@ -130,7 +128,6 @@ def word_ids_to_sentence(id_tensor, vocab):
     for i in id_tensor:
         res.append(vocab.itos[i])
     res = np.array(res).reshape(orig_shape)
-    #  return res.T
     return res
 
 
@@ -141,15 +138,16 @@ def evaluate(data_iter):
     with torch.no_grad():
         for counter, batch in enumerate(data_iter, 1):
             text, text_len = batch.text[0], batch.text[1]
+            leng, leng_len = batch.leng[0], batch.leng[1]
             label = batch.label
 
-            #  output = model(text, text_len)
-            output, attn = model(text, text_len)
+            output, _ = model(text, text_len, leng, leng_len, TEXT)
             _, predicted_label = output.view(-1, label_num).max(dim=1)
             correct += (predicted_label == label).sum().item()
             example_num += len(label)
 
-    return correct/ example_num 
+    return correct / example_num
+
 
 def eva_vis(data_iter):
     model.eval()
@@ -157,14 +155,15 @@ def eva_vis(data_iter):
     with torch.no_grad():
         for counter, batch in enumerate(data_iter, 1):
             text, text_len = batch.text[0], batch.text[1]
+            leng, leng_len = batch.leng[0], batch.leng[1]
             label = batch.label
-            _, attn = model(text, text_len)
+            _, attn = model(text, text_len, leng, leng_len, TEXT)
             #  print attention and text
             if i == 2:
                 poem = word_ids_to_sentence(text, TEXT.vocab)
                 p_label = word_ids_to_sentence(label, LABEL.vocab)
                 attn = attn.cpu().numpy()
-                writer = pd.ExcelWriter('result1.xlsx')
+                writer = pd.ExcelWriter('result_w.xlsx')
                 l = len(poem[0])
                 data = np.zeros(shape=(args.batch_size*3, l), dtype=object)
                 for t in range(args.batch_size):
@@ -172,11 +171,10 @@ def eva_vis(data_iter):
                     data[3*t+1] = poem[t]
                     data[3*t+2] = attn[t]
                 data = pd.DataFrame(data)
-                data.to_excel(writer, 'page_1', float_format='%.5f')
+                data.to_excel(writer, 'page_w', float_format='%.5f')
                 writer.save()
                 writer.close()
             i += 1
-
 
 
 def train():
@@ -186,11 +184,12 @@ def train():
     start_time = time.time()
     for counter, batch in enumerate(train_iter, 1):
         text, text_len = batch.text[0], batch.text[1]
+        leng, leng_len = batch.leng[0], batch.leng[1]
         label = batch.label
 
         #  model.zero_grad()
         optimizer.zero_grad()
-        output,_ = model(text, text_len)
+        output, _ = model(text, text_len, leng, leng_len, TEXT)
         loss = criterion(output, label)
         loss.backward()
 
@@ -212,17 +211,16 @@ best_val_correct_rate = None
 # At any point you can hit Ctrl + C to break out of training early.
 all_train_start_time = datetime.datetime.now()
 try:
-    last_rate = 0
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_loss = train()
         correct_rate = evaluate(test_iter)
         #  visualization
-        #  if epoch == 1:
-            #  last_rate = correct_rate
-        #  if correct_rate >= last_rate: 
-            #  last_rate = correct_rate
-            #  eva_vis(test_iter)
+        if epoch == 1:
+            last_rate = correct_rate
+        if correct_rate >= last_rate:
+            last_rate = correct_rate
+            eva_vis(test_iter)
 
         print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on test {correct_rate} | lr {lr}")
         if not best_val_correct_rate or correct_rate > best_val_correct_rate:

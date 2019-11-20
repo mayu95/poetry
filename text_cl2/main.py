@@ -167,17 +167,18 @@ def eva_vis(data_iter):
                 attn = attn.cpu().numpy()
                 writer = pd.ExcelWriter('result1.xlsx')
                 l = len(poem[0])
-                data = np.zeros(shape=(args.batch_size*3, l), dtype=object)
+                data = np.zeros(shape=(args.batch_size*4, l), dtype=object)
                 for t in range(args.batch_size):
                     #  title and label
-                    for i in range(l):
-                        if i in range(len(title[t])):
-                            data[4*t][i] = title[t][i]
-                        else:
-                            data[4*t][i] = str(p_label[t])
-                    #  data[4*t+1] = title[t]
-                    data[4*t+1] = poem[t]
-                    data[4*t+2] = attn[t]
+                    data[4*t] = p_label[t]
+                    data[4*t+1] = title[t]
+                    #  for i in range(l):
+                        #  if i in range(len(title[t])):
+                            #  data[3*t][i] = title[t][i]
+                        #  else:
+                            #  data[3*t][i] = str(p_label[t])
+                    data[4*t+2] = poem[t]
+                    data[4*t+3] = attn[t]
                 data = pd.DataFrame(data)
                 data.to_excel(writer, 'page_1', float_format='%.5f')
                 writer.save()
@@ -226,10 +227,9 @@ try:
         train_loss = train()
         correct_rate = evaluate(test_iter)
         #  visualization
-        eva_vis(test_iter)
-        #  if correct_rate >= last_rate: 
-            #  last_rate = correct_rate
-            #  eva_vis(test_iter)
+        if correct_rate >= last_rate: 
+            last_rate = correct_rate
+            eva_vis(test_iter)
     
 
         print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on test {correct_rate} | lr {lr}")

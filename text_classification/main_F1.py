@@ -9,6 +9,7 @@ import torch.nn as nn
 import torchtext
 import numpy as np
 import pandas as pd
+from sklearn.metrics import f1_score
 
 import dataset
 #  import model_zeroshot as model
@@ -146,10 +147,14 @@ def evaluate(data_iter):
             #  output = model(text, text_len)
             output, attn = model(text, text_len)
             _, predicted_label = output.view(-1, label_num).max(dim=1)
-            correct += (predicted_label == label).sum().item()
-            example_num += len(label)
+            #  correct += (predicted_label == label).sum().item()
+            #  example_num += len(label)
+            label = label.cpu()
+            predicted_label = predicted_label.cpu()
+            F1 = f1_score(label, predicted_label, labels=[0,1] , average=None)
 
-    return correct/ example_num 
+    #  return correct/ example_num 
+    return F1 
 
 def eva_vis(data_iter):
     model.eval()
@@ -225,12 +230,12 @@ try:
             #  eva_vis(test_iter)
 
         print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on test {correct_rate} | lr {lr}")
-        if not best_val_correct_rate or correct_rate > best_val_correct_rate:
-            best_val_correct_rate = correct_rate
-        else:
+        #  if not best_val_correct_rate or correct_rate > best_val_correct_rate:
+            #  best_val_correct_rate = correct_rate
+        #  else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
             #  lr /= 2.0
-            pass
+            #  pass
         if epoch % 4 == 0:
             pass
             #  test_correct_rate = evaluate(test_iter)

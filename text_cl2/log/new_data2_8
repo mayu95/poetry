@@ -1,0 +1,35 @@
+Namespace(batch_size=128, bidirectional=True, clip=0.25, data='data_title', device='cuda:0', dropout=0.2, emsize=200, encoder='rnn', epochs=30, log_interval=200, lr=0.005, nhid=200, nlayers=1, note='', save='model.pt', seed=1111, weight_decay=0.0001)
+vocab_size: 87544 label_num: 2
+epoch 1 | time 22.0s | train loss 56891.657421052456 | correct rate on test 0.8516835016835017 | lr 0.005
+epoch 2 | time 22.5s | train loss 267.70238406956196 | correct rate on test 0.8572390572390572 | lr 0.005
+epoch 3 | time 22.9s | train loss 195.8367237225175 | correct rate on test 0.8543771043771043 | lr 0.005
+epoch 4 | time 23.0s | train loss 150.76910841092467 | correct rate on test 0.8574074074074074 | lr 0.005
+epoch 5 | time 22.8s | train loss 141.71155213937163 | correct rate on test 0.8541245791245792 | lr 0.005
+epoch 6 | time 23.1s | train loss 139.6779267853126 | correct rate on test 0.8541245791245792 | lr 0.005
+epoch 7 | time 23.4s | train loss 300762.41407996416 | correct rate on test 0.8532828282828283 | lr 0.005
+epoch 8 | time 22.9s | train loss 662594.5131417438 | correct rate on test 0.853030303030303 | lr 0.005
+epoch 9 | time 23.5s | train loss 406733.7518074736 | correct rate on test 0.8494949494949495 | lr 0.005
+epoch 10 | time 22.9s | train loss 603449.5457220767 | correct rate on test 0.8578282828282828 | lr 0.005
+epoch 11 | time 23.2s | train loss 205733.424483411 | correct rate on test 0.8462121212121212 | lr 0.005
+epoch 12 | time 23.7s | train loss 70544.89695025422 | correct rate on test 0.8505050505050505 | lr 0.005
+epoch 13 | time 23.6s | train loss 618269.0049969293 | correct rate on test 0.854040404040404 | lr 0.005
+epoch 14 | time 23.0s | train loss 290857.98012588546 | correct rate on test 0.8447811447811447 | lr 0.005
+epoch 15 | time 23.5s | train loss 127.44052189774811 | correct rate on test 0.8574074074074074 | lr 0.005
+epoch 16 | time 23.3s | train loss 125.85807790607214 | correct rate on test 0.8599326599326599 | lr 0.005
+epoch 17 | time 22.9s | train loss 124.8963961917907 | correct rate on test 0.8544612794612795 | lr 0.005
+epoch 18 | time 23.7s | train loss 124.38282860815525 | correct rate on test 0.8368686868686869 | lr 0.005
+epoch 19 | time 23.5s | train loss 124.31776822917163 | correct rate on test 0.8534511784511785 | lr 0.005
+epoch 20 | time 23.1s | train loss 122.75811237096786 | correct rate on test 0.851010101010101 | lr 0.005
+epoch 21 | time 23.1s | train loss 123.20809293352067 | correct rate on test 0.8569023569023569 | lr 0.005
+epoch 22 | time 23.2s | train loss 124.09851593337953 | correct rate on test 0.8538720538720539 | lr 0.005
+epoch 23 | time 23.3s | train loss 83932.82083866559 | correct rate on test 0.856986531986532 | lr 0.005
+epoch 24 | time 23.1s | train loss 121.51959060318768 | correct rate on test 0.843013468013468 | lr 0.005
+epoch 25 | time 23.2s | train loss 120.88042569719255 | correct rate on test 0.8517676767676767 | lr 0.005
+epoch 26 | time 23.4s | train loss 440614.9108843338 | correct rate on test 0.85 | lr 0.005
+epoch 27 | time 23.1s | train loss 120.41151870973408 | correct rate on test 0.8553872053872054 | lr 0.005
+epoch 28 | time 22.7s | train loss 120.99229176156223 | correct rate on test 0.8576599326599327 | lr 0.005
+epoch 29 | time 23.0s | train loss 87188.52824674547 | correct rate on test 0.8569023569023569 | lr 0.005
+epoch 30 | time 23.1s | train loss 120.34596463479102 | correct rate on test 0.855976430976431 | lr 0.005
+all training time elapsed: 0:11:33.659913
+training time per epoch: 0:00:23.121997
+correct rate on test: 0.855976430976431

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import pandas as pd
 from torchtext.data import Field
+from torchtext import data as data
 from torchtext.data import TabularDataset
 from torchtext.data import Iterator, BucketIterator
 
@@ -23,6 +25,8 @@ def word_ids_to_sentence(id_tensor, vocab):
 
 def create_data_iter(batch_size, device, data_root):
     tokenize = lambda x: x.split()
+    #  tokenize_s = lambda x: x.split('#')
+
     TEXT = Field(
         sequential=True,
         tokenize=tokenize,
@@ -30,16 +34,19 @@ def create_data_iter(batch_size, device, data_root):
         include_lengths=True,
         batch_first=True
     )
-    LABEL = Field(sequential=False, use_vocab=True, unk_token=None)
+    #  LABEL = Field(sequential=False, use_vocab=True, unk_token=None)
+    LABEL = Field(sequential=False, use_vocab=False, unk_token=None)
+
     # Training and valid data fields 
-    tv_datafields = [("label", LABEL), ("title", TEXT), ("text", TEXT)] 
+    tv_datafields = [("label", LABEL), ("text", TEXT), ("leng", TEXT)] 
     train, val, test = TabularDataset.splits(
         path=data_root,
-        train='train2', validation="dev1.title", test="test2",
+        #  train='train_#.tsv', validation="valid_#.tsv", test="test_#.tsv",
+        #  train='train1.no_title_num', validation="dev1.no_title_num", test="test1.no_title_num",
+        train='train_1.num', validation="test_2.num", test="test_1.num",
         format='tsv',
         skip_header=False,
-        fields=tv_datafields,
-        #  csv_reader_params=(error_bad_lines=False, warn_bad_lines=True)
+        fields=tv_datafields
     )
 
     TEXT.build_vocab(train)
@@ -57,18 +64,19 @@ def create_data_iter(batch_size, device, data_root):
     return TEXT, LABEL, train_iter, val_iter, test_iter
 
 if __name__ == "__main__":
-    TEXT, LABEL, train_iter, val_iter, test_iter = create_data_iter(20, -1, "data_title")
+    TEXT, LABEL, train_iter, val_iter, test_iter = create_data_iter(20, -1, "data_punc_title")
     padding_index = TEXT.vocab.stoi["<pad>"]
     print(f"padding_index: {padding_index}")
     print(f"index 0 in vocab: {TEXT.vocab.itos[0]}")
     for counter, batch in enumerate(test_iter, 1):
         text_int, text_len = batch.text[0], batch.text[1]
-        title_int, title_len = batch.title[0], batch.title[1]
+        leng_int, leng_len = batch.leng[0], batch.leng[1]
         label_int = batch.label
         print(word_ids_to_sentence(text_int, TEXT.vocab))
-        print(word_ids_to_sentence(title_int, TEXT.vocab))
+        print(word_ids_to_sentence(leng_int, TEXT.vocab))
         print(word_ids_to_sentence(label_int, LABEL.vocab))
         print(f"len: {text_len}")
-        print(f"len: {title_len}")
+        print(f"len: {leng_len}")
         print(label_int)
+        #  print(f"len:{leng_int}")
         break

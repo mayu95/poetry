@@ -9,10 +9,10 @@ import torch.nn as nn
 import torchtext
 import numpy as np
 import pandas as pd
+from sklearn.metrics import f1_score
 
 import dataset
-#  import model_zeroshot as model
-import model_word_bias as model
+import model
 
 parser = argparse.ArgumentParser(description='text classification')
 parser.add_argument('--data', type=str, default='',
@@ -133,7 +133,6 @@ def word_ids_to_sentence(id_tensor, vocab):
     #  return res.T
     return res
 
-
 def evaluate(data_iter):
     model.eval()
     correct = 0.
@@ -142,14 +141,18 @@ def evaluate(data_iter):
         for counter, batch in enumerate(data_iter, 1):
             text, text_len = batch.text[0], batch.text[1]
             label = batch.label
+            title, title_len = batch.title[0], batch.title[1]
 
-            #  output = model(text, text_len)
-            output, attn = model(text, text_len)
+            output,_ = model(text, text_len, title, title_len)
             _, predicted_label = output.view(-1, label_num).max(dim=1)
-            correct += (predicted_label == label).sum().item()
-            example_num += len(label)
+            #  correct += (predicted_label == label).sum().item()
+            #  example_num += len(label)
+            label = label.cpu()
+            predicted_label = predicted_label.cpu()
+            F1 = f1_score(label, predicted_label, labels=[0,1] , average=None)
 
-    return correct/ example_num 
+    #  return correct / example_num
+    return F1
 
 def eva_vis(data_iter):
     model.eval()
@@ -158,25 +161,34 @@ def eva_vis(data_iter):
         for counter, batch in enumerate(data_iter, 1):
             text, text_len = batch.text[0], batch.text[1]
             label = batch.label
-            _, attn = model(text, text_len)
+            title, title_len = batch.title[0], batch.title[1]
+
+            _, attn = model(text, text_len, title, title_len)
             #  print attention and text
             if i == 2:
                 poem = word_ids_to_sentence(text, TEXT.vocab)
+                title = word_ids_to_sentence(title, TEXT.vocab)
                 p_label = word_ids_to_sentence(label, LABEL.vocab)
                 attn = attn.cpu().numpy()
-                writer = pd.ExcelWriter('result1.xlsx')
+                writer = pd.ExcelWriter('result_F1_1.xlsx')
                 l = len(poem[0])
-                data = np.zeros(shape=(args.batch_size*3, l), dtype=object)
+                data = np.zeros(shape=(args.batch_size*4, l), dtype=object)
                 for t in range(args.batch_size):
-                    data[3*t] = p_label[t]
-                    data[3*t+1] = poem[t]
-                    data[3*t+2] = attn[t]
+                    #  title and label
+                    data[4*t] = p_label[t]
+                    data[4*t+1] = title[t]
+                    #  for i in range(l):
+                        #  if i in range(len(title[t])):
+                            #  data[3*t][i] = title[t][i]
+                        #  else:
+                            #  data[3*t][i] = str(p_label[t])
+                    data[4*t+2] = poem[t]
+                    data[4*t+3] = attn[t]
                 data = pd.DataFrame(data)
                 data.to_excel(writer, 'page_1', float_format='%.5f')
                 writer.save()
                 writer.close()
             i += 1
-
 
 
 def train():
@@ -187,10 +199,12 @@ def train():
     for counter, batch in enumerate(train_iter, 1):
         text, text_len = batch.text[0], batch.text[1]
         label = batch.label
+        title, title_len = batch.title[0], batch.title[1]
+
 
         #  model.zero_grad()
         optimizer.zero_grad()
-        output,_ = model(text, text_len)
+        output,_ = model(text, text_len, title, title_len)
         loss = criterion(output, label)
         loss.backward()
 
@@ -218,19 +232,18 @@ try:
         train_loss = train()
         correct_rate = evaluate(test_iter)
         #  visualization
-        #  if epoch == 1:
-            #  last_rate = correct_rate
         #  if correct_rate >= last_rate: 
             #  last_rate = correct_rate
             #  eva_vis(test_iter)
+    
 
         print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on test {correct_rate} | lr {lr}")
-        if not best_val_correct_rate or correct_rate > best_val_correct_rate:
-            best_val_correct_rate = correct_rate
-        else:
+        #  if not best_val_correct_rate or correct_rate > best_val_correct_rate:
+            #  best_val_correct_rate = correct_rate
+        #  else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
             #  lr /= 2.0
-            pass
+            #  pass
         if epoch % 4 == 0:
             pass
             #  test_correct_rate = evaluate(test_iter)
