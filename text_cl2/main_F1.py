@@ -149,7 +149,10 @@ def evaluate(data_iter):
             #  example_num += len(label)
             label = label.cpu()
             predicted_label = predicted_label.cpu()
+            #  average=None
             F1 = f1_score(label, predicted_label, labels=[0,1] , average=None)
+            #  average=weighted
+            F1 = f1_score(label, predicted_label, average='weighted')
 
     #  return correct / example_num
     return F1
@@ -230,6 +233,9 @@ try:
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         train_loss = train()
+        state = {'net':model.state_dict(), 'optimizer':optimizer.state_dict(), 'epoch':epoch}
+        file_name = 'epoch_' + str(epoch) + str(datetime.date.today())
+        torch.save(state, file_name)
         correct_rate = evaluate(test_iter)
         #  visualization
         #  if correct_rate >= last_rate: 
