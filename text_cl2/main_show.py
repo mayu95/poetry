@@ -9,45 +9,38 @@ import torch.nn as nn
 import torchtext
 import numpy as np
 import pandas as pd
+import csv
+from sklearn.metrics import f1_score
 
 import dataset_sentence as dataset
 import model_sentence as model
+#  import model_new_sent as model
 
 parser = argparse.ArgumentParser(description='text classification')
-parser.add_argument('--data', type=str, default='',
-                    help='location of the data corpus')
-parser.add_argument('--emsize', type=int, default=200,
-                    help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=200,
+parser.add_argument('--data', type=str, default='', help='location of the data corpus')
+parser.add_argument('--emsize', type=int, default=200, help='size of word embeddings')
+parser.add_argument('--nhid', type=int, default=200, 
                     help='number of hidden units per layer')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
                     metavar='W', help='weight decay')
-parser.add_argument('--nlayers', type=int, default=2,
-                    help='number of layers')
-parser.add_argument('--lr', type=float, default=1,
-                    help='initial learning rate')
-parser.add_argument('--clip', type=float, default=0.25,
-                    help='gradient clipping')
-parser.add_argument('--epochs', type=int, default=40,
-                    help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=20, metavar='N',
-                    help='batch size')
+parser.add_argument('--nlayers', type=int, default=2, help='number of layers')
+parser.add_argument('--lr', type=float, default=1, help='initial learning rate')
+parser.add_argument('--clip', type=float, default=0.25, help='gradient clipping')
+parser.add_argument('--epochs', type=int, default=40, help='upper epoch limit')
+parser.add_argument('--batch_size', type=int, default=20, metavar='N', help='batch size')
 parser.add_argument('--dropout', type=float, default=0.2,
                     help='dropout applied to layers (0 = no dropout)')
-parser.add_argument('--seed', type=int, default=1111,
-                    help='random seed')
-parser.add_argument('--device', type=str, default='cuda:0',
-                    help='cuda')
-parser.add_argument('--log-interval', type=int, default=200, metavar='N',
+parser.add_argument('--seed', type=int, default=1111, help='random seed')
+parser.add_argument('--device', type=str, default='cuda:0', help='cuda')
+parser.add_argument('--log-interval', type=int, default=200, metavar='N', 
                     help='report interval')
 parser.add_argument('--save', type=str, default='model.pt',
                     help='path to save the final model')
 parser.add_argument('--note', type=str, default="",
                     help='extra note in final one-line result output')
-parser.add_argument('--encoder', type=str, default="rnn",
-                    help='rnn, avg')
-parser.add_argument('--bidirectional', action='store_true',
-                    help='help')
+parser.add_argument('--encoder', type=str, default="rnn", help='rnn, avg')
+parser.add_argument('--bidirectional', action='store_true', help='help')
+parser.add_argument('--test', default="", help='test')
 args = parser.parse_args()
 print(args)
 
@@ -145,14 +138,26 @@ def evaluate(data_iter):
 
             output,_ = model(text, text_len, title, title_len, leng, leng_len, TEXT)
             _, predicted_label = output.view(-1, label_num).max(dim=1)
-            correct += (predicted_label == label).sum().item()
-            example_num += len(label)
+            #  correct += (predicted_label == label).sum().item()
+            #  example_num += len(label)
+            label = label.cpu()
+            predicted_label = predicted_label.cpu()
+            F1 = f1_score(label, predicted_label, average='weighted')
 
-    return correct / example_num
+    #  return correct / example_num
+    return F1 
 
-def eva_vis(data_iter):
+
+def testing_eval(data_iter, epoch):
+    f = "epoch_" + str(epoch)
+    checkpoint = torch.load(f)
+    model.load_state_dict(checkpoint['net'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    start_epoch = checkpoint['epoch']
+
     model.eval()
-    i = 0
+    correct = 0.
+    example_num = 0
     with torch.no_grad():
         for counter, batch in enumerate(data_iter, 1):
             text, text_len = batch.text[0], batch.text[1]
@@ -160,26 +165,44 @@ def eva_vis(data_iter):
             title, title_len = batch.title[0], batch.title[1]
             leng, leng_len = batch.leng[0], batch.leng[1]
 
-            _, attn = model(text, text_len, title, title_len, leng, leng_len, TEXT)
-            #  print attention and text
-            if i == 2:
+            output,_ = model(text, text_len, title, title_len, leng, leng_len, TEXT)
+            _, predicted_label = output.view(-1, label_num).max(dim=1)
+            label = label.cpu()
+            predicted_label = predicted_label.cpu()
+            F1 = f1_score(label, predicted_label, average='weighted')
+    return F1
+
+
+def eva_vis(data_iter, epoch):
+    model.eval()
+    i = 0
+    f_name = 'result' + str(epoch)
+    with torch.no_grad():
+        with open(f_name, 'w') as fw:
+            writer = csv.writer(fw, delimiter='\n')
+            for counter, batch in enumerate(data_iter, 1):
+                text, text_len = batch.text[0], batch.text[1]
+                label = batch.label
+                title, title_len = batch.title[0], batch.title[1]
+                leng, leng_len = batch.leng[0], batch.leng[1]
+
+                _, attn = model(text, text_len, title, title_len, leng, leng_len, TEXT)
+                #  print attention and text
                 poem = word_ids_to_sentence(text, TEXT.vocab)
                 title = word_ids_to_sentence(title, TEXT.vocab)
                 p_label = word_ids_to_sentence(label, LABEL.vocab)
                 attn = attn.cpu().numpy()
-                writer = pd.ExcelWriter('result2.xlsx')
-                l = len(poem[0])
-                data = np.zeros(shape=(args.batch_size*3, l), dtype=object)
+
                 for t in range(args.batch_size):
-                    #  title and label
-                    data[3*t] = p_label[t]
-                    data[3*t+1] = poem[t]
-                    data[3*t+2] = attn[t]
-                data = pd.DataFrame(data)
-                data.to_excel(writer, 'page_1', float_format='%.5f')
-                writer.save()
-                writer.close()
-            i += 1
+                    #  w_title = ''
+                    #  for w in title[t-1]:
+                        #  if w == '<pad>':
+                            #  break
+                        #  w_title += w
+                    l_t = str(p_label[t-1]) + '\t' + str(title[t-1]) 
+                    w_poem = ' '.join(poem[t-1])
+                    w_attn = ' '.join('%s' %id for id in attn[t-1])
+                    writer.writerow([l_t, w_poem, w_attn])
 
 
 def train():
@@ -192,7 +215,6 @@ def train():
         label = batch.label
         title, title_len = batch.title[0], batch.title[1]
         leng, leng_len = batch.leng[0], batch.leng[1]
-
 
         #  model.zero_grad()
         optimizer.zero_grad()
@@ -219,38 +241,63 @@ best_val_correct_rate = None
 all_train_start_time = datetime.datetime.now()
 try:
     last_rate = 0
-    for epoch in range(1, args.epochs+1):
+    #  for epoch in range(1, args.epochs+1):
+    for epoch in range(1, args.epochs):
         epoch_start_time = time.time()
-        train_loss = train()
-        correct_rate = evaluate(test_iter)
-        #  visualization
-        #  if correct_rate >= last_rate: 
-            #  last_rate = correct_rate
-            #  eva_vis(test_iter)
-    
 
-        print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on test {correct_rate} | lr {lr}")
-        if not best_val_correct_rate or correct_rate > best_val_correct_rate:
-            best_val_correct_rate = correct_rate
+        if str(args.test) == "":
+            #  checkpoint_name = "ckpt-e{}".format(epoch)
+            #  checkpoint_path = os.path.join(dir_path, checkpoint_name)
+            train_loss = train()
+            state = {'net':model.state_dict(), 'optimizer':optimizer.state_dict(), 'epoch':epoch}
+            #  checkpoint_path += ".pth"
+            #  checkpoint_path = 'result_epoch_' + str(epoch) 
+            checkpoint_path = 'epoch_' + str(epoch) 
+            torch.save(state, checkpoint_path)
+
+            correct_rate = evaluate(val_iter)
+
+            #  visualization
+            if correct_rate >= last_rate: 
+                last_rate = correct_rate
+                eva_vis(train_iter, epoch)
+
+            print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on test {correct_rate} | lr {lr}")
+            #  if not best_val_correct_rate or correct_rate > best_val_correct_rate:
+                #  best_val_correct_rate = correct_rate
+            #  else:
+                # Anneal the learning rate if no improvement has been seen in the validation dataset.
+                #  lr /= 2.0
+                #  pass
+            if epoch % 4 == 0:
+                pass
+                #  test_correct_rate = evaluate(test_iter)
+                #  print(f"correct rate on test: {test_correct_rate}")
+            #  if lr < 0.05:
+                #  break
+
         else:
-            # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            #  lr /= 2.0
-            pass
-        if epoch % 4 == 0:
-            pass
-            #  test_correct_rate = evaluate(test_iter)
-            #  print(f"correct rate on test: {test_correct_rate}")
-        #  if lr < 0.05:
-            #  break
+            correct_rate = testing_eval(test_iter, epoch)
+            print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | correct rate on test {correct_rate} | lr {lr}")
+
+
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')
 
 all_train_end_time = datetime.datetime.now()
 all_train_time = f"{all_train_end_time - all_train_start_time}"
-print(f"all training time elapsed: {all_train_time}")
-print(f"training time per epoch: {(all_train_end_time - all_train_start_time) / args.epochs}")
-
+if str(args.test) == "":
+    print(f"all training time elapsed: {all_train_time}")
+    print(f"training time per epoch: {(all_train_end_time - all_train_start_time) / args.epochs}")
+    # Run on valid data.
+    val_correct_rate = evaluate(val_iter)
+    print(f"correct rate on valid data: {val_correct_rate}")
+else:
+    print(f"all test time elapsed: {all_train_time}")
+    print(f"testing time per epoch: {(all_train_end_time - all_train_start_time) / args.epochs}")
+    test_correct_rate = testing_eval(test_iter)
+    print(f"correct rate on test: {test_correct_rate}")
 
 # Run on test data.
 test_correct_rate = evaluate(test_iter)

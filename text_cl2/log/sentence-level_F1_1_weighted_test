@@ -1,0 +1,24 @@
+Namespace(batch_size=128, bidirectional=True, clip=0.25, data='data_title_length', device='cuda:0', dropout=0.2, emsize=200, encoder='rnn', epochs=20, log_interval=200, lr=0.005, nhid=200, nlayers=1, note='', save='model.pt', seed=1111, test='yes', weight_decay=0.0001)
+vocab_size: 9344 label_num: 2
+epoch 1 | time 23.1s | correct rate on test 0.7108897474339754 | lr 0.005
+epoch 2 | time 22.9s | correct rate on test 0.7346042632066728 | lr 0.005
+epoch 3 | time 21.8s | correct rate on test 0.7293495581631174 | lr 0.005
+epoch 4 | time 21.4s | correct rate on test 0.758734854888701 | lr 0.005
+epoch 5 | time 21.9s | correct rate on test 0.721695695809696 | lr 0.005
+epoch 6 | time 21.6s | correct rate on test 0.7401205590525979 | lr 0.005
+epoch 7 | time 22.3s | correct rate on test 0.720870230093531 | lr 0.005
+epoch 8 | time 21.7s | correct rate on test 0.7208670478656454 | lr 0.005
+epoch 9 | time 21.7s | correct rate on test 0.7119677197802198 | lr 0.005
+epoch 10 | time 22.2s | correct rate on test 0.7465688143347312 | lr 0.005
+epoch 11 | time 22.8s | correct rate on test 0.7075794011554591 | lr 0.005
+epoch 12 | time 22.5s | correct rate on test 0.6573754883614039 | lr 0.005
+epoch 13 | time 22.1s | correct rate on test 0.7119653376590113 | lr 0.005
+epoch 14 | time 21.9s | correct rate on test 0.7119653376590113 | lr 0.005
+epoch 15 | time 22.0s | correct rate on test 0.7328386836260852 | lr 0.005
+epoch 16 | time 21.7s | correct rate on test 0.721695695809696 | lr 0.005
+epoch 17 | time 21.9s | correct rate on test 0.7593681447117633 | lr 0.005
+epoch 18 | time 22.8s | correct rate on test 0.7283216783216784 | lr 0.005
+epoch 19 | time 21.3s | correct rate on test 0.7401175962887042 | lr 0.005
+epoch 20 | time 22.6s | correct rate on test 0.7542632066728453 | lr 0.005
+all test time elapsed: 0:07:22.424641
+testing time per epoch: 0:00:22.121232

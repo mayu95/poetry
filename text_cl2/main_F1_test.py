@@ -9,6 +9,7 @@ import torch.nn as nn
 import torchtext
 import numpy as np
 import pandas as pd
+import csv
 from sklearn.metrics import f1_score
 
 import dataset
@@ -178,54 +179,41 @@ def testing_eval(data_iter, epoch):
 
             output,_ = model(text, text_len, title, title_len)
             _, predicted_label = output.view(-1, label_num).max(dim=1)
-            #  correct += (predicted_label == label).sum().item()
-            #  example_num += len(label)
             label = label.cpu()
             predicted_label = predicted_label.cpu()
-            #  average=None
-            #  F1 = f1_score(label, predicted_label, labels=[0,1] , average=None)
-            #  average=weighted
             F1 = f1_score(label, predicted_label, average='weighted')
-
-    #  return correct / example_num
     return F1
 
 
-def eva_vis(data_iter):
+def eva_vis(data_iter, epoch):
     model.eval()
     i = 0
+    f_name = 'result' + str(epoch)
     with torch.no_grad():
-        for counter, batch in enumerate(data_iter, 1):
-            text, text_len = batch.text[0], batch.text[1]
-            label = batch.label
-            title, title_len = batch.title[0], batch.title[1]
+        with open(f_name, 'w') as fw:
+            writer = csv.writer(fw, delimiter='\n')
+            for counter, batch in enumerate(data_iter, 1):
+                text, text_len = batch.text[0], batch.text[1]
+                label = batch.label
+                title, title_len = batch.title[0], batch.title[1]
 
-            _, attn = model(text, text_len, title, title_len)
-            #  print attention and text
-            if i == 2:
+                _, attn = model(text, text_len, title, title_len)
+                #  print attention and text
                 poem = word_ids_to_sentence(text, TEXT.vocab)
                 title = word_ids_to_sentence(title, TEXT.vocab)
                 p_label = word_ids_to_sentence(label, LABEL.vocab)
                 attn = attn.cpu().numpy()
-                writer = pd.ExcelWriter('result_F1_1.xlsx')
-                l = len(poem[0])
-                data = np.zeros(shape=(args.batch_size*4, l), dtype=object)
+
                 for t in range(args.batch_size):
-                    #  title and label
-                    data[4*t] = p_label[t]
-                    data[4*t+1] = title[t]
-                    #  for i in range(l):
-                        #  if i in range(len(title[t])):
-                            #  data[3*t][i] = title[t][i]
-                        #  else:
-                            #  data[3*t][i] = str(p_label[t])
-                    data[4*t+2] = poem[t]
-                    data[4*t+3] = attn[t]
-                data = pd.DataFrame(data)
-                data.to_excel(writer, 'page_1', float_format='%.5f')
-                writer.save()
-                writer.close()
-            i += 1
+                    w_title = ''
+                    for w in title[t]:
+                        if w == '<pad>':
+                            break
+                        w_title += w
+                    l_t = str(p_label[t]) + '\t' + w_title 
+                    w_poem = ' '.join(poem[t])
+                    w_attn = ' '.join('%s' %id for id in attn[t])
+                    writer.writerow([l_t, w_poem, w_attn])
 
 
 def train():
@@ -262,15 +250,14 @@ best_val_correct_rate = None
 
 # At any point you can hit Ctrl + C to break out of training early.
 all_train_start_time = datetime.datetime.now()
-dir_path = './' + str(datetime.date.today())
 try:
     last_rate = 0
     for epoch in range(1, args.epochs+1):
         epoch_start_time = time.time()
         
         if str(args.test) == "":
-            checkpoint_name = "ckpt-e{}".format(epoch)
-            checkpoint_path = os.path.join(dir_path, checkpoint_name)
+            #  checkpoint_name = "ckpt-e{}".format(epoch)
+            #  checkpoint_path = os.path.join(dir_path, checkpoint_name)
             train_loss = train()
             state = {'net':model.state_dict(), 'optimizer':optimizer.state_dict(), 'epoch':epoch}
             #  checkpoint_path += ".pth"
@@ -278,11 +265,10 @@ try:
             torch.save(state, checkpoint_path)
 
             correct_rate = evaluate(val_iter)
-
             #  visualization
-            #  if correct_rate >= last_rate: 
-                #  last_rate = correct_rate
-                #  eva_vis(test_iter)
+            if correct_rate >= last_rate: 
+                last_rate = correct_rate
+                eva_vis(train_iter, epoch)
 
             print(f"epoch {epoch} | time {time.time() - epoch_start_time:.1f}s | train loss {train_loss} | correct rate on dev {correct_rate} | lr {lr}")
             #  if not best_val_correct_rate or correct_rate > best_val_correct_rate:

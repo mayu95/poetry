@@ -35,7 +35,7 @@ def create_data_iter(batch_size, device, data_root):
     tv_datafields = [("label", LABEL), ("title", TEXT), ("text", TEXT)] 
     train, val, test = TabularDataset.splits(
         path=data_root,
-        train='Train2', validation="Dev2", test="H2",
+        train='Train11', validation="Dev11", test="test1",
         format='tsv',
         skip_header=False,
         fields=tv_datafields,
@@ -66,9 +66,14 @@ if __name__ == "__main__":
         title_int, title_len = batch.title[0], batch.title[1]
         label_int = batch.label
         print(word_ids_to_sentence(text_int, TEXT.vocab))
-        print(word_ids_to_sentence(title_int, TEXT.vocab))
-        print(word_ids_to_sentence(label_int, LABEL.vocab))
+        print(text_int)
+        sp = TEXT.vocab.stoi["#"]
+        print(f"# is : {sp}")
+        unk = TEXT.vocab.stoi["<unk>"]
+        print(f"unk_token is : {unk}")
+        #  print(word_ids_to_sentence(title_int, TEXT.vocab))
+        #  print(word_ids_to_sentence(label_int, LABEL.vocab))
         print(f"len: {text_len}")
-        print(f"len: {title_len}")
-        print(label_int)
+        #  print(f"len: {title_len}")
+        #  print(label_int)
         break
