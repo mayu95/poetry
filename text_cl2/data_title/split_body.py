@@ -7,47 +7,52 @@ import csv
 
 if __name__ == "__main__":
     
-    file1 = './Train_data'
-    with open(file1) as f, open('Data_train', 'w') as fw:
+    file1 = 'Train'
+    with open(file1) as f, open('./Train_data', 'w') as fw:
         writer = csv.writer(fw, delimiter='\t')
         for line in f:
             l = line.split('\n')[0] 
             l = l.split('\t')
             label = l[0]
-            title = l[1]
-            body = l[2]
-            title2 = '' 
-            for i in title:
-                title2 += ' ' + i
-            writer.writerow([label, title2, body])
+            t = l[1] 
+            author = l[2]
+            body = l[3]
+            #  body2 = '' 
+            #  for i in body:
+                #  body2 += ' ' + i
+            writer.writerow([label, t, body])
 
-    file2 = './Test_data'
-    with open(file2) as f, open('Data_test', 'w') as fw:
+    file2 = './Test'
+    with open(file2) as f, open('Test_data', 'w') as fw:
         writer = csv.writer(fw, delimiter='\t')
         for line in f:
             l = line.split('\n')[0] 
             l = l.split('\t')
             label = l[0]
             title = l[1]
-            body = l[2]
-            title2 = '' 
-            for i in title:
-                title2 += ' ' + i
-            writer.writerow([label, title2, body])
+            author = l[2]
+            body = l[3]
+            #  body = l[2]
+            #  title2 = '' 
+            #  for i in title:
+                #  title2 += ' ' + i
+            writer.writerow([label, title, body])
 
-    file3 = './Dev_data'
-    with open(file3) as f, open('Data_dev', 'w') as fw:
+    file3 = './Dev'
+    with open(file3) as f, open('Dev_data', 'w') as fw:
         writer = csv.writer(fw, delimiter='\t')
         for line in f:
             l = line.split('\n')[0] 
             l = l.split('\t')
             label = l[0]
             title = l[1]
-            body = l[2]
-            title2 = '' 
-            for i in title:
-                title2 += ' ' + i
-            writer.writerow([label, title2, body])
+            author = l[2]
+            body = l[3]
+            #  body = l[2]
+            #  title2 = '' 
+            #  for i in title:
+                #  title2 += ' ' + i
+            writer.writerow([label, title, body])
 
     #  file4 = './test_4.title'
     #  with open(file4) as f, open('/home/lr/lijia/poetry/text_cl2/data_title/test4', 'w') as fw:

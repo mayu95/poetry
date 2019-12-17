@@ -13,7 +13,8 @@ import csv
 from sklearn.metrics import f1_score
 
 import dataset
-import model
+#  import model
+import model_new_word as model
 
 parser = argparse.ArgumentParser(description='text classification')
 parser.add_argument('--data', type=str, default='',
@@ -188,7 +189,7 @@ def testing_eval(data_iter, epoch):
 def eva_vis(data_iter, epoch):
     model.eval()
     i = 0
-    f_name = 'result' + str(epoch)
+    f_name = 'w_result' + str(epoch)
     with torch.no_grad():
         with open(f_name, 'w') as fw:
             writer = csv.writer(fw, delimiter='\n')
@@ -204,8 +205,10 @@ def eva_vis(data_iter, epoch):
                 p_label = word_ids_to_sentence(label, LABEL.vocab)
                 attn = attn.cpu().numpy()
 
-                for t in range(args.batch_size):
+                for t in range(0, (args.batch_size-1)):
                     w_title = ''
+                    if t >= len(title):
+                        break
                     for w in title[t]:
                         if w == '<pad>':
                             break

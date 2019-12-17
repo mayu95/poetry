@@ -13,8 +13,8 @@ import csv
 from sklearn.metrics import f1_score
 
 import dataset_sentence as dataset
-import model_sentence as model
-#  import model_new_sent as model
+#  import model_sentence as model
+import model_new_sent as model
 
 parser = argparse.ArgumentParser(description='text classification')
 parser.add_argument('--data', type=str, default='', help='location of the data corpus')
@@ -149,7 +149,7 @@ def evaluate(data_iter):
 
 
 def testing_eval(data_iter, epoch):
-    f = "epoch_" + str(epoch)
+    f = "./s_epoch/epoch_" + str(epoch)
     checkpoint = torch.load(f)
     model.load_state_dict(checkpoint['net'])
     optimizer.load_state_dict(checkpoint['optimizer'])
@@ -176,7 +176,7 @@ def testing_eval(data_iter, epoch):
 def eva_vis(data_iter, epoch):
     model.eval()
     i = 0
-    f_name = 'result' + str(epoch)
+    f_name = './s_result/s_result' + str(epoch)
     with torch.no_grad():
         with open(f_name, 'w') as fw:
             writer = csv.writer(fw, delimiter='\n')
@@ -193,15 +193,17 @@ def eva_vis(data_iter, epoch):
                 p_label = word_ids_to_sentence(label, LABEL.vocab)
                 attn = attn.cpu().numpy()
 
-                for t in range(args.batch_size):
-                    #  w_title = ''
-                    #  for w in title[t-1]:
-                        #  if w == '<pad>':
-                            #  break
-                        #  w_title += w
-                    l_t = str(p_label[t-1]) + '\t' + str(title[t-1]) 
-                    w_poem = ' '.join(poem[t-1])
-                    w_attn = ' '.join('%s' %id for id in attn[t-1])
+                for t in range(args.batch_size-1):
+                    w_title = ''
+                    if t >= len(title):
+                        break
+                    for w in title[t]:
+                        if w == '<pad>':
+                            break
+                        w_title += w
+                    l_t = str(p_label[t]) + '\t' + str(title[t]) 
+                    w_poem = ' '.join(poem[t])
+                    w_attn = ' '.join('%s' %id for id in attn[t])
                     writer.writerow([l_t, w_poem, w_attn])
 
 
@@ -252,7 +254,7 @@ try:
             state = {'net':model.state_dict(), 'optimizer':optimizer.state_dict(), 'epoch':epoch}
             #  checkpoint_path += ".pth"
             #  checkpoint_path = 'result_epoch_' + str(epoch) 
-            checkpoint_path = 'epoch_' + str(epoch) 
+            checkpoint_path = './s_epoch/epoch_' + str(epoch) 
             torch.save(state, checkpoint_path)
 
             correct_rate = evaluate(val_iter)

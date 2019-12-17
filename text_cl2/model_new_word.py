@@ -49,8 +49,7 @@ class RNN(nn.Module):
         self.hi = nn.Linear(self.hidden_size*2, self.hidden_size*2, bias=True)
         self.attn_weights = nn.Linear(self.hidden_size*2, 1, bias=True)
         self.energy = nn.Linear(1, 1, bias=True)
-        #  sentence-level
-        self.Us = nn.Linear(self.hidden_size*2, 1, bias=False)
+
 
         # rnn module
         if rnn_model == 'LSTM':
@@ -74,6 +73,7 @@ class RNN(nn.Module):
         else:
             raise LookupError(' only support LSTM and GRU')
 
+
         out_hidden_size = hidden_size * 2
         #  out_hidden_size = hidden_size
         if self.encoder_model == "avg":
@@ -94,11 +94,10 @@ class RNN(nn.Module):
         #  creat mask of pad=1, #=2, without unk=0
         batch_size = len(x)
         batch_length = len(x[0])
-        mask = np.ones(shape=(batch_size, batch_length), dtype=float) 
+        mask = np.ones(shape=(batch_size, batch_length)) 
         for i in range(batch_size):
             for j in range(batch_length):
                 if x[i,j]==1 or x[i,j]==2:
-                    #  mask[i,j] = 0
                     mask[i,j] = -1000000000 
         return mask
 
@@ -145,12 +144,12 @@ class RNN(nn.Module):
         out = self.fc(output)
         return out
 
-    def forward(self, x, seq_lengths, title, title_len,leng, leng_lengths, TEXT):
+    def forward(self, x, seq_lengths, title, title_len):
         if self.encoder_model == "avg":
             return self.forward_avg(x, seq_lengths)
         if self.encoder_model == "rnn":
             #  return self.forward_rnn(x, seq_lengths, title, title_len)
-            return self.forward_rnn_attn(x, seq_lengths, title, title_len, leng, leng_lengths, TEXT)
+            return self.forward_rnn_attn(x, seq_lengths, title, title_len)
         if self.encoder_model == "cnn":
             return self.forward_cnn(x, seq_lengths)
 
@@ -225,17 +224,7 @@ class RNN(nn.Module):
         return out
 
 
-    def word_ids_to_sentence(self, id_tensor, vocab):
-        orig_shape = id_tensor.shape
-        id_tensor = id_tensor.view(-1)
-        res = []
-        for i in id_tensor:
-            res.append(vocab.itos[i])
-        res = np.array(res).reshape(orig_shape)
-        return res
-
-
-    def forward_rnn_attn(self, x, seq_lengths, title, title_len, leng, leng_lengths, TEXT):
+    def forward_rnn_attn(self, x, seq_lengths, title, title_len):
         '''
         Args:
             x: (batch, time_step, input_size)
@@ -243,15 +232,12 @@ class RNN(nn.Module):
         Returns:
             num_output size
         '''
-        
-        #  leng
-        leng = self.word_ids_to_sentence(leng, TEXT.vocab)
-
         #  creat mask
         mask = self.creat_mask(x)
         mask = torch.from_numpy(mask).float()
+        #  mask = torch.double(mask)
 
-        #  titile
+
         sorted_title_len, perm_idx = torch.sort(title_len, 0, descending=True)
         sorted_title = title[perm_idx, :]
 
@@ -259,6 +245,14 @@ class RNN(nn.Module):
         title_emb = self.encoder(sorted_title)
         title_emb = self.drop_en(title_emb)
         packed_title_in = pack_padded_sequence(title_emb, sorted_title_len.cpu().numpy(),batch_first=True)
+        #  try:
+            #  packed_title_in = pack_padded_sequence(title_emb, sorted_title_len.cpu().numpy(),batch_first=True)
+        #  except Exception as e:
+            #  print('str(e):\t\t', str(e))
+            #  print(e.args)
+            #  pass
+            #  exit(0)
+
         packed_title_out, _ = self.rnn(packed_title_in, None)
         title_out, _ = pad_packed_sequence(packed_title_out, batch_first=True)
 
@@ -342,7 +336,8 @@ class RNN(nn.Module):
                 #  mask = torch.arange(seq_len)[None, :] < seq_lengths[:, None].cpu()
                 #  mask = mask.float()
                 #  mask[mask==0] = -10000000
-                energy = energy * mask.cuda()
+                mask = mask.cuda()
+                energy = energy * mask
 
                 #  attention 3: attn
                 soft_attn = torch.sigmoid(energy)
@@ -350,45 +345,7 @@ class RNN(nn.Module):
                 soft_attn_sum = torch.sum(soft_attn, dim=1).reshape(-1,1)
                 soft_attn = torch.div(soft_attn, soft_attn_sum)
 
-                #  attn = torch.bmm(bilstm_out.transpose(1,2), soft_attn.unsqueeze(2)).squeeze(2) # BxN 
-                #  last_tensor = attn
-                word_attn = bilstm_out * soft_attn.unsqueeze(2)   # B x Sw x N
-
-                #  sentence-level
-                Ss = len(leng[0])
-                s_attn = torch.zeros([batch_size, Ss, out_size])    # B x Ss x N
-                s_attn = s_attn.cuda()
-
-                for batch in range(batch_size):
-                    w_attn = word_attn[batch]    # Sw x N
-                    poem_num = leng[batch]       # eg: [7,7,7,7]
-                    leng_max = len(poem_num)     # 句数
-                    word_sum = 0
-                    for s_n in range(leng_max):
-                        if poem_num[s_n]=='<pad>' or poem_num[s_n]== '<unk>':  # 这个batch没有诗了
-                            break
-                        sentence_num = int(float(poem_num[s_n]))  # Ss[s_n]
-                        #  sum
-                        if sentence_num == 0:
-                            break
-                        for n in range(word_sum, word_sum+sentence_num):
-                            s_attn[batch][s_n] += w_attn[n]
-                        word_sum += sentence_num + 1
-
-                h_s = s_attn
-                attn_s = self.Us.cuda()
-                attn_s = attn_s(h_s)           # BxSsxN --> BxSsx1
-                attn_s = torch.tanh(attn_s)
-                attn_s = attn_s.squeeze(2)     # BxSsx1 --> BxSs
-
-                mask2 = torch.arange(Ss)[None, :] < leng_lengths[:, None].cpu()
-                mask2 = mask2.float()
-                mask2[mask2==0] = -10000000
-                attn_s = attn_s * mask2.cuda()
-
-                attn_s = F.softmax(attn_s, 1)
-                
-                attn = torch.bmm(h_s.transpose(1,2), attn_s.unsqueeze(2)).squeeze(2)
+                attn = torch.bmm(bilstm_out.transpose(1,2), soft_attn.unsqueeze(2)).squeeze(2) # BxN 
                 last_tensor = attn
 
         else:

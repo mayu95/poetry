@@ -35,7 +35,9 @@ def create_data_iter(batch_size, device, data_root):
     tv_datafields = [("label", LABEL), ("title", TEXT), ("text", TEXT)] 
     train, val, test = TabularDataset.splits(
         path=data_root,
-        train='Train11', validation="Dev11", test="test1",
+        #  train='Train_data', validation="Dev_data", test="Test_data",
+        train='Data_train', validation="Data_dev", test="Data_test",
+        #  train='Train11', validation="Dev11", test="test1",
         format='tsv',
         skip_header=False,
         fields=tv_datafields,
